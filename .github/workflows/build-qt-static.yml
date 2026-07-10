@@ -1,0 +1,63 @@
+name: Build Qt 6 Static (MinGW)
+
+on:
+  workflow_dispatch: # Memungkinkan Anda menjalankan build ini secara manual lewat tombol di GitHub
+
+jobs:
+  build:
+    runs-on: windows-2022 # Menggunakan server Windows Server 2022 resmi dari GitHub
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install Ninja & Tools
+      run: |
+        choco install ninja
+        # GitHub Windows Runner sudah menyertakan MinGW, CMake, dan Python secara default
+
+    - name: Download Qt Source Code
+      shell: bash
+      run: |
+        echo "Mengunduh Qt 6.11.1 Source..."
+        curl -L -o qt-src.zip https://download.qt.io/official_releases/qt/6.11/6.11.1/single/qt-everywhere-src-6.11.1.zip
+        echo "Mengekstrak Source (Proses ini agak memakan waktu)..."
+        unzip -q qt-src.zip
+        mv qt-everywhere-src-6.11.1 qt-src
+        rm qt-src.zip
+
+    - name: Set up MinGW Environment
+      shell: cmd
+      run: |
+        # Menggunakan compiler MinGW 11/12 bawaan GitHub runner yang stabil
+        # Jalur ini otomatis menyesuaikan dengan environment Windows Server
+        echo C:\ProgramData\Chocolatey\bin>> %GITHUB_PATH%
+        echo C:\msys64\mingw64\bin>> %GITHUB_PATH%
+
+    - name: Configure Qt (Static & Minimalis)
+      shell: cmd
+      run: |
+        mkdir qt-build
+        cd qt-build
+        # Konfigurasi super ketat agar build cepat: hanya modul esensial, tanpa test, tanpa contoh
+        ..\qt-src\configure.bat -static -release -prefix "${{ github.workspace }}/qt6-static-mingw" -confirm-license -opensource -nomake examples -nomake tests -make libs -skip qtwebengine -skip qtwayland -skip qt3d
+
+    - name: Compile Qt Static
+      shell: cmd
+      run: |
+        cd qt-build
+        # Menggunakan Ninja build agar utilitas multi-core CPU bekerja 100% maksimal dan sangat cepat
+        cmake --build . --parallel --target install
+
+    - name: Compress Build Result
+      shell: bash
+      run: |
+        echo "Membungkus hasil build menjadi zip..."
+        zip -r qt6.11.1-static-mingw.zip qt6-static-mingw/
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: qt6.11.1-static-mingw
+        path: qt6.11.1-static-mingw.zip
+        retention-days: 7 # File zip akan disimpan selama 7 hari di GitHub Anda
