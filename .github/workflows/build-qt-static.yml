@@ -29,8 +29,6 @@ jobs:
     - name: Set up MinGW Environment
       shell: cmd
       run: |
-        # Menggunakan compiler MinGW 11/12 bawaan GitHub runner yang stabil
-        # Jalur ini otomatis menyesuaikan dengan environment Windows Server
         echo C:\ProgramData\Chocolatey\bin>> %GITHUB_PATH%
         echo C:\msys64\mingw64\bin>> %GITHUB_PATH%
 
@@ -39,21 +37,19 @@ jobs:
       run: |
         mkdir qt-build
         cd qt-build
-        # Konfigurasi super ketat agar build cepat: hanya modul esensial, tanpa test, tanpa contoh
         ..\qt-src\configure.bat -static -release -prefix "${{ github.workspace }}/qt6-static-mingw" -confirm-license -opensource -nomake examples -nomake tests -make libs -skip qtwebengine -skip qtwayland -skip qt3d
 
     - name: Compile Qt Static
       shell: cmd
       run: |
         cd qt-build
-        # Menggunakan Ninja build agar utilitas multi-core CPU bekerja 100% maksimal dan sangat cepat
         cmake --build . --parallel --target install
 
     - name: Compress Build Result
       shell: bash
       run: |
-        echo "Membungkus hasil build menjadi zip..."
-        zip -r qt6.11.1-static-mingw.zip qt6-static-mingw/
+        echo "Mengompresi hasil build dengan 7-Zip mode Ultra..."
+        7z a -mx=9 -ms=on qt6.11.1-static-mingw.7z qt6-static-mingw
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
