@@ -37,7 +37,7 @@ jobs:
       run: |
         mkdir qt-build
         cd qt-build
-        ..\qt-src\configure.bat -G Ninja -static -release -prefix "${{ github.workspace }}\qt6-static-mingw" -confirm-license -opensource -nomake examples -nomake tests -make libs
+        ..\qt-src\configure.bat -cmake-generator Ninja -static -release -prefix "${{ github.workspace }}\qt6-static-mingw" -confirm-license -opensource -nomake examples -nomake tests -make libs
 
     - name: Compile & Install Qt Static
       shell: cmd
