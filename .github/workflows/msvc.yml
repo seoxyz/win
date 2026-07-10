@@ -1,0 +1,98 @@
+name: Build Qt 6.11.1 Static MSVC
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    env:
+      QT_VERSION: 6.11.1
+      INSTALL_DIR: ${{ github.workspace }}\qt6-static-msvc
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Ninja
+        run: choco install ninja -y
+
+      - name: Cache Qt Source
+        id: cache-qt-src
+        uses: actions/cache@v4
+        with:
+          path: |
+            qt-src
+            qt.zip
+          key: qt-src-6.11.1
+
+      - name: Download Qt Source
+        if: steps.cache-qt-src.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest `
+            https://download.qt.io/official_releases/qt/6.11/6.11.1/single/qt-everywhere-src-6.11.1.zip `
+            -OutFile qt.zip
+
+      - name: Extract Qt Source
+        if: steps.cache-qt-src.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          Expand-Archive qt.zip .
+          Rename-Item qt-everywhere-src-6.11.1 qt-src
+
+      - name: Configure Qt
+        shell: cmd
+        run: |
+          mkdir build
+          cd build
+          ..\qt-src\configure.bat ^
+          -release ^
+          -static ^
+          -static-runtime ^
+          -opensource ^
+          -confirm-license ^
+          -nomake tests ^
+          -nomake examples ^
+          -skip qt3d ^
+          -skip qtwebengine ^
+          -skip qtwebview ^
+          -skip qtdoc ^
+          -skip qttranslations ^
+          -platform win32-msvc ^
+          -prefix "%INSTALL_DIR%" ^
+          -cmake-generator Ninja
+
+      - name: Build
+        shell: cmd
+        run: |
+          cd build
+          cmake --build . --parallel
+
+      - name: Install
+        shell: cmd
+        run: |
+          cd build
+          cmake --install .
+
+      - name: Verify
+        shell: cmd
+        run: |
+          %INSTALL_DIR%\bin\qmake.exe -query
+          dir %INSTALL_DIR%
+
+      - name: Compress
+        shell: cmd
+        run: |
+          7z a -mx=9 qt6-static-msvc.7z %INSTALL_DIR%
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: qt6-static-msvc
+          path: qt6-static-msvc.7z
