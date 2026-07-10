@@ -37,16 +37,17 @@ jobs:
       run: |
         mkdir qt-build
         cd qt-build
-        ..\qt-src\configure.bat -static -release -prefix "${{ github.workspace }}/qt6-static-mingw" -confirm-license -opensource -nomake examples -nomake tests -make libs -skip qtwebengine -skip qtwayland -skip qt3d
+        ..\qt-src\configure.bat -G Ninja -static -release -prefix "${{ github.workspace }}\qt6-static-mingw" -confirm-license -opensource -nomake examples -nomake tests -make libs
 
-    - name: Compile Qt Static
+    - name: Compile & Install Qt Static
       shell: cmd
       run: |
         cd qt-build
-        cmake --build . --parallel --target install
+        cmake --build . --parallel
+        cmake --install .
 
-    - name: Compress Build Result
-      shell: bash
+    - name: Compress Build Result (High Compression)
+      shell: cmd
       run: |
         echo "Mengompresi hasil build dengan 7-Zip mode Ultra..."
         7z a -mx=9 -ms=on qt6.11.1-static-mingw.7z qt6-static-mingw
@@ -55,5 +56,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: qt6.11.1-static-mingw
-        path: qt6.11.1-static-mingw.zip
-        retention-days: 7 # File zip akan disimpan selama 7 hari di GitHub Anda
+        path: qt6.11.1-static-mingw.7z
+        retention-days: 7
