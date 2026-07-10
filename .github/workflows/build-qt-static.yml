@@ -11,20 +11,31 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
+	- name: Cache Qt Source
+	uses: actions/cache@v4
+	with:
+		path: qt-src
+		key: qt-src-6.11.1
+
     - name: Install Ninja & Tools
       run: |
         choco install ninja
         # GitHub Windows Runner sudah menyertakan MinGW, CMake, dan Python secara default
 
-    - name: Download Qt Source Code
-      shell: bash
-      run: |
-        echo "Mengunduh Qt 6.11.1 Source..."
-        curl -L -o qt-src.zip https://download.qt.io/official_releases/qt/6.11/6.11.1/single/qt-everywhere-src-6.11.1.zip
-        echo "Mengekstrak Source (Proses ini agak memakan waktu)..."
-        unzip -q qt-src.zip
-        mv qt-everywhere-src-6.11.1 qt-src
-        rm qt-src.zip
+	- name: Download Qt Source
+	shell: bash
+	run: |
+		if [ ! -d qt-src ]; then
+		echo "Downloading Qt..."
+		curl -L \
+		-o qt-src.zip \
+		https://download.qt.io/official_releases/qt/6.11/6.11.1/single/qt-everywhere-src-6.11.1.zip
+		unzip -q qt-src.zip
+		mv qt-everywhere-src-6.11.1 qt-src
+		rm qt-src.zip
+		else
+		echo "Qt source restored from cache."
+		fi
 
     - name: Set up MinGW Environment
       shell: cmd
@@ -32,25 +43,25 @@ jobs:
         echo C:\ProgramData\Chocolatey\bin>> %GITHUB_PATH%
         echo C:\msys64\mingw64\bin>> %GITHUB_PATH%
 
-    - name: Configure Qt (Static & Minimalis)
-      shell: cmd
-      run: |
-        mkdir qt-build
-        cd qt-build
-        ..\qt-src\configure.bat -cmake-generator Ninja -static -release -prefix "${{ github.workspace }}\qt6-static-mingw" -confirm-license -opensource -nomake examples -nomake tests -make libs
+	- name: Configure Qt (Static)
+	shell: cmd
+	run: |
+		mkdir qt-build
+		cd qt-build
+		..\qt-src\configure.bat -static -static-runtime -release -opensource -confirm-license -prefix "%GITHUB_WORKSPACE%\qt6-static-msvc" -nomake examples -nomake tests -cmake-generator Ninja
 
-    - name: Compile & Install Qt Static
-      shell: cmd
-      run: |
-        cd qt-build
-        cmake --build . --parallel
-        cmake --install .
+	- name: Build Qt
+	shell: cmd
+	run: |
+		cd qt-build
+		cmake --build . --parallel
+		cmake --install .
 
     - name: Compress Build Result (High Compression)
       shell: cmd
       run: |
         echo "Mengompresi hasil build dengan 7-Zip mode Ultra..."
-        7z a -mx=9 -ms=on qt6.11.1-static-mingw.7z qt6-static-mingw
+        7z a -mx=9 qt6-static-msvc.7z qt6-static-msvc
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
