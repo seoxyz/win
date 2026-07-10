@@ -12,8 +12,8 @@ jobs:
       uses: actions/checkout@v4
 
 	- name: Cache Qt Source
-	uses: actions/cache@v4
-	with:
+	  uses: actions/cache@v4
+	  with:
 		path: qt-src
 		key: qt-src-6.11.1
 
@@ -23,8 +23,8 @@ jobs:
         # GitHub Windows Runner sudah menyertakan MinGW, CMake, dan Python secara default
 
 	- name: Download Qt Source
-	shell: bash
-	run: |
+	  shell: bash
+	  run: |
 		if [ ! -d qt-src ]; then
 		echo "Downloading Qt..."
 		curl -L \
@@ -44,15 +44,15 @@ jobs:
         echo C:\msys64\mingw64\bin>> %GITHUB_PATH%
 
 	- name: Configure Qt (Static)
-	shell: cmd
-	run: |
+	  shell: cmd
+	  run: |
 		mkdir qt-build
 		cd qt-build
 		..\qt-src\configure.bat -static -static-runtime -release -opensource -confirm-license -prefix "%GITHUB_WORKSPACE%\qt6-static-msvc" -nomake examples -nomake tests -cmake-generator Ninja
 
 	- name: Build Qt
-	shell: cmd
-	run: |
+	  shell: cmd
+	  run: |
 		cd qt-build
 		cmake --build . --parallel
 		cmake --install .
