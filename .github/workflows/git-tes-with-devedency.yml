@@ -1,0 +1,53 @@
+
+name: Clone Repository and Compress 7z Ultra
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Install 7-Zip
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full
+
+      - name: Clone Repository Recursively
+        run: |
+          git clone --recursive \
+            https://github.com/MiffedLyric559/gta5-extended-video-export-Community-Edition.git
+
+      - name: Update All Submodules
+        working-directory: gta5-extended-video-export-Community-Edition
+        run: |
+          git submodule update --init --recursive
+
+      - name: Compress All Files with 7z Ultra
+        run: |
+          7z a -t7z \
+            -mx=9 \
+            -m0=lzma2 \
+            -mmt=on \
+            -ms=on \
+            gta5-extended-video-export-Community-Edition.7z \
+            gta5-extended-video-export-Community-Edition/
+
+      - name: Verify 7z Archive
+        run: |
+          7z t gta5-extended-video-export-Community-Edition.7z
+          ls -lh *.7z
+
+      - name: Upload Artifact (1 Day)
+        uses: actions/upload-artifact@v4
+        with:
+          name: GTA5-Extended-Video-Export-Source
+          path: gta5-extended-video-export-Community-Edition.7z
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
